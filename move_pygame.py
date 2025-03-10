@@ -7,73 +7,95 @@ from math import sqrt
 from beacons import Beacon
 from Swarmalator import Swarmalator
 from boundary_manager import BoundaryManager
-from obstacle import Obstacle_Manager
 
-N_GRID = 15
-M_GRID = 15
-maxX = N_GRID // 2
-minX = - (N_GRID // 2)
-maxY = M_GRID // 2
-minY = -(M_GRID // 2)
+maxX = 800
+maxY  = 800
+SCALE = int(maxX / 33)
 
 NUM_SWARMALATORS = 30
 B = 0.4
-dt = 0.2
+dt = 1
+
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
 
 class Simulation:
     def __init__(self):
         self.arr_beacons = []
         self.arr_swarmalators = pygame.sprite.Group()
-        self.obstacles = pygame.sprite.Group()
-        self.new_beacon_j=20
+        self.obstacles = []
+        self.new_beacon_j=32
         self.set_grid_beacons()
         self.set_swarmalators()
         self.set_time = time.time()
-        self.median_x = np.mean([swarmalator.x for swarmalator in self.arr_swarmalators])
-        self.median_y = np.mean([swarmalator.y for swarmalator in self.arr_swarmalators])
         self.boundary_speed = 0.05
         self.boundary_direction = (np.pi) / 2
-        self.curr_boundary = BoundaryManager(self.median_x, self.median_y, self.boundary_speed, self.boundary_direction, minX, maxX, minY, maxY, thres_dist=1.5)
+        self.curr_boundary = BoundaryManager(33//2, 33//2, self.boundary_speed, self.boundary_direction, 0, 33, 0, 33, thres_dist=3)
         self.init_obstacles()
 
     def set_grid_beacons(self):
-        for i in range(minX, maxX + 1):
-            for j in range(minY, maxY + 1):
-                if -2 <= j <= 0 and -2 <= i <= 0:
+        for i in range(0, 33):
+            for j in range(0, 33):
+                if 33//2-2 <= j <= 33//2+2 and 33//2-2 <= i <= 33//2+2:
                     beac = Beacon(i, j, beacon_j=self.new_beacon_j)
                 else:
                     beac = Beacon(i, j, beacon_j=0)
                 self.arr_beacons.append(beac)
 
     def set_swarmalators(self):
-        for _ in range(NUM_SWARMALATORS):
-            while True:
-                x = minX + random.random() * (maxX - minX)
-                y = minY + random.random() * (maxY - minY)
-                swarmalator = Swarmalator(x, y)
-                if all(sqrt((s.x - x) ** 2 + (s.y - y) ** 2) >= 2 * s.radius for s in self.arr_swarmalators):
-                    self.arr_swarmalators.add(swarmalator)
-                    break
+        while len(self.arr_swarmalators) < NUM_SWARMALATORS:
+            i = random.randint(0, 33)
+            j = random.randint(0, 33)
+            if all(sqrt((s.x - i) ** 2 + (s.y - j) ** 2) >= 2 * s.radius for s in self.arr_swarmalators):
+                swarmalator = Swarmalator(i, j)
+                self.arr_swarmalators.add(swarmalator)
 
     def init_obstacles(self):
-        self.obstacles.add(Obstacle_Manager("rect", -0.75, 5, size=60, color=(255, 0, 0)))
-        self.obstacles.add(Obstacle_Manager("rect", -0.75, 3, size=60, color=(255, 0, 0)))
-        self.obstacles.add(Obstacle_Manager("rect", -0.75, 1, size=60, color=(255, 0, 0)))
+        #left, top, width, height
+        self.obstacles = [
+            pygame.Rect(350, 200, 100, 30),
+            pygame.Rect(350, 50, 100, 30),
+            pygame.Rect(325, 475, 100, 30),
+            pygame.Rect(325, 650, 100, 30)
+        ]
 
 
     def handle_collisions(self, swarmalator):
-        swarmalator.update()
+        swarmalator_rect = pygame.Rect(int(swarmalator.x * SCALE - swarmalator.radius * SCALE), int(swarmalator.y * SCALE - swarmalator.radius * SCALE), swarmalator.radius * SCALE, swarmalator.radius * SCALE)
+
+        offset = abs(swarmalator.v_y)
 
         for obstacle in self.obstacles:
-            dist_x = swarmalator.rect.centerx - obstacle.rect.centerx
-            dist_y = swarmalator.rect.centery - obstacle.rect.centery
-            distance = sqrt(dist_x ** 2 + dist_y ** 2)
-            threshold = obstacle.size / 40
-
-            if obstacle.shape == "rect" and pygame.sprite.collide_rect(swarmalator, obstacle) and distance <= max(1, threshold):
-                repulsion_strength = 1.5 * threshold
-                swarmalator.dx = repulsion_strength * (dist_x / (distance * 0.2 + 0.1))
-                swarmalator.dy = repulsion_strength * (dist_y / (distance * 0.2 + 0.1))
+            if swarmalator_rect.colliderect(obstacle):
+                if abs(swarmalator_rect.bottom - obstacle.top) < 10 and swarmalator.v_y > 0:  # Hitting from top
+                    swarmalator.v_y *= -1
+                    swarmalator.y -= 2 * offset
+                    if swarmalator_rect.centerx < obstacle.centerx:
+                        swarmalator.x -= 3 * offset
+                    else:
+                        swarmalator.x += 3 * offset
+                elif abs(swarmalator_rect.top - obstacle.bottom) < 10 and swarmalator.v_y < 0:  # Hitting from bottom
+                    swarmalator.v_y *= -1
+                    swarmalator.y += 2 * offset
+                    if swarmalator_rect.centerx < obstacle.centerx:
+                        swarmalator.x -= 3 * offset
+                    else:
+                        swarmalator.x += 3 * offset
+                elif abs(swarmalator_rect.right - obstacle.left) < 10 and swarmalator.v_x > 0:  # Hitting from left
+                    swarmalator.v_x *= -1
+                    swarmalator.x -= 2 * offset
+                    if swarmalator_rect.centery < obstacle.centery:
+                        swarmalator.y -= 3 * offset
+                    else:
+                        swarmalator.y += 3 * offset
+                elif abs(swarmalator_rect.left - obstacle.right) < 10 and swarmalator.v_x < 0:  # Hitting from right
+                    swarmalator.v_x *= -1
+                    swarmalator.x += 2 * offset
+                    if swarmalator_rect.centery < obstacle.centery:
+                        swarmalator.y -= 3 * offset
+                    else:
+                        swarmalator.y += 3 * offset
 
 
     def total_movement_and_phase_calcs(self):
@@ -84,6 +106,8 @@ class Simulation:
             curr_swarmalator.dy_static = 0
             curr_swarmalator.num_bots_in_thres = 0
             curr_swarmalator.num_static_in_thres = 0
+            curr_swarmalator.v_x=0
+            curr_swarmalator.v_y=0
 
             for swarmalator in self.arr_swarmalators:
                 if curr_swarmalator != swarmalator:
@@ -112,20 +136,15 @@ class Simulation:
             if curr_swarmalator.num_static_in_thres == 0:
                 curr_swarmalator.num_static_in_thres = 1
 
+            curr_swarmalator.v_x = (curr_swarmalator.dx / curr_swarmalator.num_bots_in_thres) * dt + (curr_swarmalator.dx_static / curr_swarmalator.num_static_in_thres) * dt
+            curr_swarmalator.v_y = (curr_swarmalator.dy / curr_swarmalator.num_bots_in_thres) * dt + (curr_swarmalator.dy_static / curr_swarmalator.num_static_in_thres) * dt
             self.handle_collisions(curr_swarmalator)
-
-            curr_swarmalator.x += (curr_swarmalator.dx / curr_swarmalator.num_bots_in_thres) * dt + (curr_swarmalator.dx_static / curr_swarmalator.num_static_in_thres) * dt
-            curr_swarmalator.y += (curr_swarmalator.dy / curr_swarmalator.num_bots_in_thres) * dt + (curr_swarmalator.dy_static / curr_swarmalator.num_static_in_thres) * dt
-
-    def transform_coordinates(self, x, y, screen_width=800, screen_height=800):
-        px = ((x - minX) / (maxX - minX)) * screen_width
-        py = screen_height - ((y - minY) / (maxY - minY)) * screen_height
-        return px, py
+            curr_swarmalator.x += curr_swarmalator.v_x
+            curr_swarmalator.y += curr_swarmalator.v_y
 
     def run(self):
-        self.init_obstacles()
         pygame.init()
-        screen = pygame.display.set_mode((800, 800))
+        screen = pygame.display.set_mode((maxX, maxY))
         clock = pygame.time.Clock()
         running = True
 
@@ -137,24 +156,19 @@ class Simulation:
             screen.fill((255, 255, 255))
             self.total_movement_and_phase_calcs()
 
-            if time.time() - self.set_time > 10:
-                self.curr_boundary.move_boundary(dt)
-                self.curr_boundary.update_beacons(self.arr_beacons, self.new_beacon_j)
-                for beacon in self.arr_beacons:
-                    if beacon.active:
-                        beacon_x, beacon_y = self.transform_coordinates(beacon.x, beacon.y)
-                        pygame.draw.circle(screen, (0, 255, 0), (beacon_x, beacon_y), 5)
+            for beacon in self.arr_beacons:
+                if beacon.active:
+                    pygame.draw.circle(screen, (0, 255, 0), (int(beacon.x * SCALE), int(beacon.y * SCALE)), 5)
 
             for swarmalator in self.arr_swarmalators:
-                swarmalator_x, swarmalator_y = self.transform_coordinates(swarmalator.x, swarmalator.y)
-                pygame.draw.circle(screen, (0, 0, 255), (swarmalator_x, swarmalator_y), swarmalator.radius * 20)
+                pygame.draw.circle(screen, (0, 0, 255), (int(swarmalator.x * SCALE), int(swarmalator.y * SCALE)), int(swarmalator.radius * 20))
 
             for obstacle in self.obstacles:
-                obstacle_x, obstacle_y = self.transform_coordinates(obstacle.x, obstacle.y)
-                if obstacle.shape == "rect":
-                    pygame.draw.rect(screen, obstacle.color, (obstacle_x, obstacle_y, obstacle.size, obstacle.size))
-                elif obstacle.shape == "circle":
-                    pygame.draw.circle(screen, obstacle.color, (obstacle_x, obstacle_y), obstacle.size)
+                pygame.draw.rect(screen, RED, obstacle)
+
+            if time.time() - self.set_time > 20:
+                self.curr_boundary.move_boundary(dt)
+                self.curr_boundary.update_beacons(self.arr_beacons, self.new_beacon_j)
 
             pygame.display.flip()
             clock.tick(30)
