@@ -55,41 +55,40 @@ class Simulation:
         #left, top, width, height
         self.obstacles = [
             pygame.Rect(350, 200, 100, 30),
-            pygame.Rect(350, 50, 100, 30),
+            # pygame.Rect(350, 50, 100, 30),
             pygame.Rect(325, 475, 100, 30),
-            pygame.Rect(325, 650, 100, 30)
+            #pygame.Rect(325, 650, 100, 30)
         ]
 
 
     def handle_collisions(self, swarmalator):
-        swarmalator_rect = pygame.Rect(
-            int(swarmalator.x * SCALE - swarmalator.radius * SCALE),
-            int(swarmalator.y * SCALE - swarmalator.radius * SCALE),
-            int(swarmalator.radius * SCALE * 2),
-            int(swarmalator.radius * SCALE * 2)
-        )
+        swarmalator_rect = pygame.Rect(int(swarmalator.x * SCALE - swarmalator.radius * SCALE), int(swarmalator.y * SCALE - swarmalator.radius * SCALE), swarmalator.radius * SCALE, swarmalator.radius * SCALE)
 
         offset = abs(swarmalator.v_y)
 
         for obstacle in self.obstacles:
+
             if swarmalator_rect.colliderect(obstacle):
                 if abs(swarmalator_rect.bottom - obstacle.top) < 10 and swarmalator.v_y > 0:  # Hitting from top
+                    obstacle.y += 2*offset
                     swarmalator.v_y *= -1
                     swarmalator.y -= 2 * offset
                     if swarmalator_rect.centerx < obstacle.centerx:
-                        swarmalator.x -= 3 * offset
+                        swarmalator.x -= offset
                     else:
-                        swarmalator.x += 3 * offset
+                        swarmalator.x += offset
                 elif abs(swarmalator_rect.top - obstacle.bottom) < 10 and swarmalator.v_y < 0:  # Hitting from bottom
                     swarmalator.v_y *= -1
+                    obstacle.y -= 2*offset
                     swarmalator.y += 2 * offset
                     if swarmalator_rect.centerx < obstacle.centerx:
-                        swarmalator.x -= 3 * offset
+                        swarmalator.x -= offset
                     else:
-                        swarmalator.x += 3 * offset
+                        swarmalator.x += offset
                 elif abs(swarmalator_rect.right - obstacle.left) < 10 and swarmalator.v_x > 0:  # Hitting from left
                     swarmalator.v_x *= -1
                     swarmalator.x -= 2 * offset
+                    obstacle.x += 2*offset
                     if swarmalator_rect.centery < obstacle.centery:
                         swarmalator.y -= 3 * offset
                     else:
@@ -97,10 +96,16 @@ class Simulation:
                 elif abs(swarmalator_rect.left - obstacle.right) < 10 and swarmalator.v_x < 0:  # Hitting from right
                     swarmalator.v_x *= -1
                     swarmalator.x += 2 * offset
+                    obstacle.x -= 2*offset
                     if swarmalator_rect.centery < obstacle.centery:
                         swarmalator.y -= 3 * offset
                     else:
                         swarmalator.y += 3 * offset
+
+                obstacle_rect = pygame.Rect(obstacle.x * SCALE, obstacle.y * SCALE, obstacle.width * SCALE, obstacle.height * SCALE)
+                obstacle_rect.x = obstacle.x * SCALE
+                obstacle_rect.y = obstacle.y * SCALE
+
 
     def total_movement_and_phase_calcs(self):
         swarmalators_positions = np.array([[s.x, s.y] for s in self.arr_swarmalators])

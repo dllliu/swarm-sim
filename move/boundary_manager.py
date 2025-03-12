@@ -1,3 +1,4 @@
+from matplotlib.path import Path
 import numpy as np
 
 class BoundaryManager:
