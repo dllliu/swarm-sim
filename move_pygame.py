@@ -14,7 +14,7 @@ SCALE = int(maxX / 33)
 
 NUM_SWARMALATORS = 30
 B = 0.4
-dt = 1
+dt = 0.3
 
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
@@ -29,8 +29,8 @@ class Simulation:
         self.set_grid_beacons()
         self.set_swarmalators()
         self.set_time = time.time()
-        self.boundary_speed = 0.05
-        self.boundary_direction = (np.pi) / 2
+        self.boundary_speed = 0.075
+        self.boundary_direction = -(np.pi) / 2
         self.curr_boundary = BoundaryManager(33//2, 33//2, self.boundary_speed, self.boundary_direction, 0, 33, 0, 33, thres_dist=3)
         self.init_obstacles()
 
@@ -45,8 +45,8 @@ class Simulation:
 
     def set_swarmalators(self):
         while len(self.arr_swarmalators) < NUM_SWARMALATORS:
-            i = random.randint(0, 33)
-            j = random.randint(0, 33)
+            i = random.uniform(12, 18)
+            j = random.uniform(12, 18)
             if all(sqrt((s.x - i) ** 2 + (s.y - j) ** 2) >= 2 * s.radius for s in self.arr_swarmalators):
                 swarmalator = Swarmalator(i, j)
                 self.arr_swarmalators.add(swarmalator)
@@ -54,10 +54,10 @@ class Simulation:
     def init_obstacles(self):
         #left, top, width, height
         self.obstacles = [
-            pygame.Rect(350, 200, 100, 30),
-            pygame.Rect(350, 50, 100, 30),
-            pygame.Rect(325, 475, 100, 30),
-            pygame.Rect(325, 650, 100, 30)
+            #pygame.Rect(350, 250, 100, 30),
+            pygame.Rect(200, 150, 100, 30),
+            pygame.Rect(500, 150, 100, 30),
+
         ]
 
 
@@ -75,18 +75,10 @@ class Simulation:
             if swarmalator_rect.colliderect(obstacle):
                 if abs(swarmalator_rect.bottom - obstacle.top) < 10 and swarmalator.v_y > 0:  # Hitting from top
                     swarmalator.v_y *= -1
-                    swarmalator.y -= 2 * offset
-                    if swarmalator_rect.centerx < obstacle.centerx:
-                        swarmalator.x -= 3 * offset
-                    else:
-                        swarmalator.x += 3 * offset
+                    swarmalator.y -= 0.5 *offset
                 elif abs(swarmalator_rect.top - obstacle.bottom) < 10 and swarmalator.v_y < 0:  # Hitting from bottom
                     swarmalator.v_y *= -1
-                    swarmalator.y += 2 * offset
-                    if swarmalator_rect.centerx < obstacle.centerx:
-                        swarmalator.x -= 3 * offset
-                    else:
-                        swarmalator.x += 3 * offset
+                    swarmalator.y += 0.5 * offset
                 elif abs(swarmalator_rect.right - obstacle.left) < 10 and swarmalator.v_x > 0:  # Hitting from left
                     swarmalator.v_x *= -1
                     swarmalator.x -= 2 * offset
@@ -165,13 +157,22 @@ class Simulation:
         clock = pygame.time.Clock()
         running = True
 
+        PHYSICS_UPDATES_PER_SECOND = 30
+        FRAME_RATE = 60
+        physics_dt = 1 / PHYSICS_UPDATES_PER_SECOND
+        frame_count = 0
+
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
 
             screen.fill((255, 255, 255))
-            self.total_movement_and_phase_calcs()
+            if frame_count % 10 == 0: #physics updates happen only once every 20 frames
+                self.total_movement_and_phase_calcs()
+                if time.time() - self.set_time > 10:
+                    self.curr_boundary.move_boundary(dt)
+                    self.curr_boundary.update_beacons(self.arr_beacons, self.new_beacon_j)
 
             for beacon in self.arr_beacons:
                 if beacon.active:
@@ -183,12 +184,9 @@ class Simulation:
             for obstacle in self.obstacles:
                 pygame.draw.rect(screen, RED, obstacle)
 
-            if time.time() - self.set_time > 20:
-                self.curr_boundary.move_boundary(dt)
-                self.curr_boundary.update_beacons(self.arr_beacons, self.new_beacon_j)
-
             pygame.display.flip()
-            clock.tick(1000)
+            clock.tick(FRAME_RATE)
+            frame_count+=1
 
         pygame.quit()
 

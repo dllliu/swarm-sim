@@ -8,7 +8,7 @@ class Swarmalator(pygame.sprite.Sprite):
         self.x = x
         self.y = y
         self.internal_freq = np.pi
-        self.radius = 0.3
+        self.radius = 0.2
         self.dx = 0
         self.dy = 0
         self.dx_static = 0
