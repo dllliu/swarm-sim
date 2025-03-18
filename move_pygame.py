@@ -6,15 +6,15 @@ from math import sqrt
 
 from beacons import Beacon
 from Swarmalator import Swarmalator
-from boundary_manager import BoundaryManager
+from boundary_manager import BoundaryPoint
 
-maxX = 800
+maxX = 800 #screen width and height
 maxY  = 800
 SCALE = int(maxX / 33)
 
 NUM_SWARMALATORS = 30
 B = 0.4
-dt = 0.3
+dt = 0.4
 
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
@@ -25,22 +25,26 @@ class Simulation:
         self.arr_beacons = []
         self.arr_swarmalators = pygame.sprite.Group()
         self.obstacles = []
-        self.new_beacon_j=32
+        self.new_beacon_j=100
+        self.thres_dist = 2 #beacon threshold distance from a swarm agent to activate, set_grid_beacons uses this
         self.set_grid_beacons()
         self.set_swarmalators()
         self.set_time = time.time()
         self.boundary_speed = 0.075
         self.boundary_direction = -(np.pi) / 2
-        self.curr_boundary = BoundaryManager(33//2, 33//2, self.boundary_speed, self.boundary_direction, 0, 33, 0, 33, thres_dist=3)
+        self.boundary_control_points = [BoundaryPoint(33//2-6, 33//2, self.boundary_speed, self.boundary_direction, 0, 33, 0, 33),
+                                        BoundaryPoint(33//2+6, 33//2, self.boundary_speed, self.boundary_direction, 0, 33, 0, 33)]
         self.init_obstacles()
 
     def set_grid_beacons(self):
         for i in range(0, 33):
             for j in range(0, 33):
-                if 33//2-2 <= j <= 33//2+2 and 33//2-2 <= i <= 33//2+2:
-                    beac = Beacon(i, j, beacon_j=self.new_beacon_j)
+                if 33//2-7 <= i <= 33//2-5 and 33//2-2 <= j <= 33//2+2:
+                    beac = Beacon(i, j, self.new_beacon_j, self.thres_dist)
+                elif 33//2+5 <= i <= 33//2+7 and 33//2-2 <= j <= 33//2+2:
+                    beac = Beacon(i, j, self.new_beacon_j, self.thres_dist)
                 else:
-                    beac = Beacon(i, j, beacon_j=0)
+                    beac = Beacon(i, j, 0, self.thres_dist)
                 self.arr_beacons.append(beac)
 
     def set_swarmalators(self):
@@ -157,9 +161,9 @@ class Simulation:
         clock = pygame.time.Clock()
         running = True
 
-        PHYSICS_UPDATES_PER_SECOND = 30
+        #PHYSICS_UPDATES_PER_SECOND = 30
         FRAME_RATE = 60
-        physics_dt = 1 / PHYSICS_UPDATES_PER_SECOND
+        # physics_dt = 1 / PHYSICS_UPDATES_PER_SECOND
         frame_count = 0
 
         while running:
@@ -168,14 +172,16 @@ class Simulation:
                     running = False
 
             screen.fill((255, 255, 255))
-            if frame_count % 10 == 0: #physics updates happen only once every 20 frames
+
+            if frame_count % 5 == 0: #physics updates happen once every 5 frames
                 self.total_movement_and_phase_calcs()
-                if time.time() - self.set_time > 10:
-                    self.curr_boundary.move_boundary(dt)
-                    self.curr_boundary.update_beacons(self.arr_beacons, self.new_beacon_j)
+                if time.time() - self.set_time > 5:
+                    for boundary_point in self.boundary_control_points:
+                        #pygame.draw.circle(screen, RED, (int(boundary_point.center_x* SCALE), int(boundary_point.center_y * SCALE)), int(0.1 * 50))
+                        boundary_point.move_boundary(dt)
 
             for beacon in self.arr_beacons:
-                if beacon.active:
+                if beacon.is_near(self.boundary_control_points, self.new_beacon_j):
                     pygame.draw.circle(screen, (0, 255, 0), (int(beacon.x * SCALE), int(beacon.y * SCALE)), 5)
 
             for swarmalator in self.arr_swarmalators:
