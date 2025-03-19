@@ -14,7 +14,7 @@ SCALE = int(maxX / 33)
 
 NUM_SWARMALATORS = 30
 B = 0.4
-dt = 0.4
+dt = 0.3
 
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
@@ -33,7 +33,7 @@ class Simulation:
         self.boundary_speed = 0.075
         self.boundary_direction = -(np.pi) / 2
         self.boundary_control_points = [BoundaryPoint(33//2-6, 33//2, self.boundary_speed, self.boundary_direction, 0, 33, 0, 33),
-                                        BoundaryPoint(33//2+6, 33//2, self.boundary_speed, self.boundary_direction, 0, 33, 0, 33)]
+                                        BoundaryPoint(33//2+5, 33//2, self.boundary_speed, self.boundary_direction, 0, 33, 0, 33)]
         self.init_obstacles()
 
     def set_grid_beacons(self):
@@ -59,12 +59,12 @@ class Simulation:
         #left, top, width, height
         self.obstacles = [
             #pygame.Rect(350, 250, 100, 30),
-            pygame.Rect(200, 150, 100, 30),
-            pygame.Rect(500, 150, 100, 30),
+            pygame.Rect(200, 250, 150, 30),
+            pygame.Rect(450, 250, 175, 30),
 
         ]
 
-
+    '''
     def handle_collisions(self, swarmalator):
         swarmalator_rect = pygame.Rect(
             int(swarmalator.x * SCALE - swarmalator.radius * SCALE),
@@ -97,6 +97,46 @@ class Simulation:
                         swarmalator.y -= 3 * offset
                     else:
                         swarmalator.y += 3 * offset
+    '''
+
+
+    def handle_collisions(self, swarmalator):
+        swarmalator_rect = pygame.Rect(int(swarmalator.x * SCALE - swarmalator.radius * SCALE), int(swarmalator.y * SCALE - swarmalator.radius * SCALE), swarmalator.radius * SCALE, swarmalator.radius * SCALE)
+
+        offset = abs(swarmalator.v_y) / dt
+
+        for obstacle in self.obstacles:
+
+            if swarmalator_rect.colliderect(obstacle):
+                if abs(swarmalator_rect.bottom - obstacle.top) < 10 and swarmalator.v_y > 0:  # Hitting from top
+                    obstacle.y += offset
+                    swarmalator.v_y *= -1
+                    #swarmalator.y -= offset
+                    if swarmalator_rect.centerx < obstacle.centerx:
+                        swarmalator.x -= offset
+                    else:
+                        swarmalator.x += offset
+                elif abs(swarmalator_rect.top - obstacle.bottom) < 10 and swarmalator.v_y < 0:  # Hitting from bottom
+                    swarmalator.v_y *= -1
+                    obstacle.y -= offset
+                    #swarmalator.y += offset
+                    if swarmalator_rect.centerx < obstacle.centerx:
+                        swarmalator.x -= offset
+                    else:
+                        swarmalator.x += offset
+                elif abs(swarmalator_rect.right - obstacle.left) < 10 and swarmalator.v_x > 0:  # Hitting from left
+                    swarmalator.v_x *= -1
+                    #swarmalator.x -= offset
+                    obstacle.x += offset
+                elif abs(swarmalator_rect.left - obstacle.right) < 10 and swarmalator.v_x < 0:  # Hitting from right
+                    swarmalator.v_x *= -1
+                    #swarmalator.x += offset
+                    obstacle.x -= offset
+
+                obstacle_rect = pygame.Rect(obstacle.x * SCALE, obstacle.y * SCALE, obstacle.width * SCALE, obstacle.height * SCALE)
+                obstacle_rect.x = obstacle.x * SCALE
+                obstacle_rect.y = obstacle.y * SCALE
+
 
     def total_movement_and_phase_calcs(self):
         swarmalators_positions = np.array([[s.x, s.y] for s in self.arr_swarmalators])
@@ -173,9 +213,9 @@ class Simulation:
 
             screen.fill((255, 255, 255))
 
-            if frame_count % 5 == 0: #physics updates happen once every 5 frames
+            if frame_count % 2 == 0: #physics updates happen once every 2 frames
                 self.total_movement_and_phase_calcs()
-                if time.time() - self.set_time > 5:
+                if time.time() - self.set_time > 15:
                     for boundary_point in self.boundary_control_points:
                         #pygame.draw.circle(screen, RED, (int(boundary_point.center_x* SCALE), int(boundary_point.center_y * SCALE)), int(0.1 * 50))
                         boundary_point.move_boundary(dt)
