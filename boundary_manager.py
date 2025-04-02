@@ -44,5 +44,5 @@ class BoundaryPoint:
         if self.center_x < self.minX or self.center_x > self.maxX or self.center_y < self.minY or self.center_y > self.maxY:
             self.speed = -self.speed  # Reverse motion in parametric equations
 
-        self.center_x = self.initial_x + radius * (self.time_elapsed * self.speed / radius - np.sin(self.time_elapsed * self.speed / radius))
-        self.center_y = self.initial_y + radius * (1 - np.cos(self.time_elapsed * self.speed / radius))
+        self.center_x = self.initial_x + radius * (1 - np.cos(self.time_elapsed * self.speed / radius))
+        self.center_y = self.initial_y + radius *  (self.time_elapsed * self.speed / radius - np.sin(self.time_elapsed * self.speed / radius))
