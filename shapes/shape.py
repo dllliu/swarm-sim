@@ -3,11 +3,10 @@ import pygame
 import random
 import time
 from math import sqrt
+import json
 
 from beacons import Beacon
 from Swarmalator import Swarmalator
-from boundary_manager import BoundaryPoint
-from obstacle import Obstacle
 
 maxX = 800 #screen width and height
 maxY  = 800
@@ -32,6 +31,7 @@ class Simulation:
         self.set_time = time.time()
         self.boundary_speed = 0.075
         self.boundary_direction = -(np.pi) / 2
+        self.sim_record = {}
         # self.boundary_control_points = [BoundaryPoint(33//2-6, 33//2, self.boundary_speed, np.pi/4, 0, 33, 0, 33),
         #                                 BoundaryPoint(33//2+5, 33//2, self.boundary_speed, -np.pi/4, 0, 33, 0, 33)]
         self.radius = 1 #for circular paths
@@ -74,9 +74,11 @@ class Simulation:
 
 
 
-    def total_movement_and_phase_calcs(self):
+    def total_movement_and_phase_calcs(self, frame_count):
         swarmalators_positions = np.array([[s.x, s.y] for s in self.arr_swarmalators])
         beacon_positions = np.array([[b.x, b.y] for b in self.arr_beacons])
+
+        sim_rec_per_dt = []
 
         for curr_swarmalator in self.arr_swarmalators:
             curr_swarmalator.dx = 0
@@ -127,6 +129,9 @@ class Simulation:
 
             curr_swarmalator.x += curr_swarmalator.v_x
             curr_swarmalator.y += curr_swarmalator.v_y
+            sim_rec_per_dt.append((curr_swarmalator.x, curr_swarmalator.y))
+
+        self.sim_record[frame_count] = sim_rec_per_dt
 
 
     def run(self):
@@ -146,12 +151,11 @@ class Simulation:
             screen.fill((255, 255, 255))
 
             if frame_count % 20 == 0: #physics updates happen once every 20 frames
-                self.total_movement_and_phase_calcs()
+                self.total_movement_and_phase_calcs(frame_count)
 
-
-            for beacon in self.arr_beacons:
-                if beacon.beacon_j > 0:
-                    pygame.draw.circle(screen, (0, 255, 0), (int(beacon.x * SCALE), int(beacon.y * SCALE)), 5)
+            # for beacon in self.arr_beacons:
+            #     if beacon.beacon_j > 0:
+            #         pygame.draw.circle(screen, (0, 255, 0), (int(beacon.x * SCALE), int(beacon.y * SCALE)), 5)
 
             for swarmalator in self.arr_swarmalators:
                 pygame.draw.circle(screen, (0, 0, 255), (int(swarmalator.x * SCALE), int(swarmalator.y * SCALE)), int(swarmalator.radius * 20))
@@ -161,6 +165,9 @@ class Simulation:
             frame_count+=1
 
         pygame.quit()
+        with open("arrow_shape", "w") as file:
+            print(self.sim_record)
+            json.dump(self.sim_record, file, indent=4)
 
 if __name__ == "__main__":
     sim = Simulation()
