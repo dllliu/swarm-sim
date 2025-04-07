@@ -12,7 +12,7 @@ clock = pygame.time.Clock()
 
 data = None
 
-with open("arrow_shape", "r") as file:
+with open("m_shape", "r") as file:
     data = json.load(file)
 
 timestamps = sorted([int(k) for k in data.keys()]) # convert to int for sorting

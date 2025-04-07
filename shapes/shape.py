@@ -24,9 +24,9 @@ class Simulation:
     def __init__(self):
         self.arr_beacons = []
         self.arr_swarmalators = pygame.sprite.Group()
-        self.new_beacon_j=2
+        self.new_beacon_j=6
         self.thres_dist = 2 #beacon threshold distance from a swarm agent to activate, set_grid_beacons uses this
-        self.set_grid_beacons("arrow")
+        self.set_grid_beacons("m")
         self.set_swarmalators()
         self.set_time = time.time()
         self.boundary_speed = 0.075
@@ -66,7 +66,7 @@ class Simulation:
 
     def set_swarmalators(self):
         while len(self.arr_swarmalators) < NUM_SWARMALATORS:
-            i = random.uniform(12, 17)
+            i = random.uniform(0, 33)
             j = random.uniform(0, 33)
             #if all(sqrt((s.x - i) ** 2 + (s.y - j) ** 2) >= 2 * s.radius for s in self.arr_swarmalators):
             swarmalator = Swarmalator(i, j)
@@ -165,7 +165,7 @@ class Simulation:
             frame_count+=1
 
         pygame.quit()
-        with open("arrow_shape", "w") as file:
+        with open("m_shape", "w") as file:
             print(self.sim_record)
             json.dump(self.sim_record, file, indent=4)
 
