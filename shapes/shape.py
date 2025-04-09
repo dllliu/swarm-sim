@@ -76,7 +76,6 @@ class Simulation:
 
     def total_movement_and_phase_calcs(self, frame_count):
         swarmalators_positions = np.array([[s.x, s.y] for s in self.arr_swarmalators])
-        beacon_positions = np.array([[b.x, b.y] for b in self.arr_beacons])
 
         sim_rec_per_dt = []
 

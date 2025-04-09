@@ -6,12 +6,15 @@ from math import sqrt
 
 from beacons import Beacon
 from Swarmalator import Swarmalator
+from mask_creator import MaskCreator
+from obstacle import Obstacle
+import json
 
 maxX = 800 #screen width and height
 maxY  = 800
 SCALE = int(maxX / 33)
 
-NUM_SWARMALATORS = 300
+NUM_SWARMALATORS = 100
 B = 0.4
 dt = 20
 
@@ -23,10 +26,10 @@ class Simulation:
     def __init__(self):
         self.arr_beacons = []
         self.arr_swarmalators = pygame.sprite.Group()
-        self.obstacles = pygame.sprite.Group()
-        self.new_beacon_j=6
+        self.new_beacon_j=6 #6
         self.thres_dist = 2 #beacon threshold distance from a swarm agent to activate, set_grid_beacons uses this
         self.set_swarmalators()
+        self.obstacles = pygame.sprite.Group()
         self.set_time = time.time()
         self.boundary_speed = 0.075
         self.boundary_direction = -(np.pi) / 2
@@ -34,30 +37,24 @@ class Simulation:
         #                                 BoundaryPoint(33//2-2, 33//2-11, self.boundary_speed, -self.boundary_direction, 0, 33, 0, 33)]
         self.radius = 1 #for circular paths
         self.screen = pygame.display.set_mode((maxX, maxY))
-        self.polygon_points = [(50, 50), (650, 50), (350, 400)]#[(50, 50), (350, 50), (125, 100), (350, 150), (50, 350), (75, 100)]
-        self.set_grid_beacons()
-
-    def create_mask_from_polygon(self):
-        temp_surface = pygame.Surface((maxX, maxY), pygame.SRCALPHA)
-        temp_surface.fill((0, 0, 0, 0))
-        pygame.draw.polygon(temp_surface, (255, 255, 255, 255), self.polygon_points)
-        return pygame.mask.from_surface(temp_surface)
-
-    def create_mask_from_donut(self, center=(400, 400), outer_radius=200, inner_radius=100):
-        temp_surface = pygame.Surface((maxX, maxY), pygame.SRCALPHA)
-        temp_surface.fill((0, 0, 0, 0))  # Fully transparent background
-
-        # Draw outer circle (white = part of the mask)
-        pygame.draw.circle(temp_surface, (255, 255, 255, 255), center, outer_radius)
-
-        # Draw inner circle (black = not part of the mask)
-        pygame.draw.circle(temp_surface, (0, 0, 0, 0), center, inner_radius)
-
-        return pygame.mask.from_surface(temp_surface)
+        self.polygon_points = [(50, 50), (350, 50), (125, 100), (350, 150), (50, 350), (75, 100)]
+        self.mask_creator = MaskCreator(maxX, maxY)
+        self.sim_record = {}
+        #self.init_obstacles()
 
 
-    def set_grid_beacons(self):
-        mask = self.create_mask_from_donut()
+    def set_grid_beacons(self, mask):
+        self.arr_beacons.clear()
+        #mask = self.mask.create_mask_from_polygon(self.polygon_points)
+        #mask = self.mask.create_mask_from_polygon([(50, 50), (650, 50), (350, 400)])
+        # mask = self.mask_creator.create_mask_from_donut()
+        #mask = self.mask.create_mask_from_circle()
+        #mask = self.mask.create_mask_from_ellipse([225, 300, 300, 400])
+        #mask = self.mask.create_mask_from_hollow_ellipse([225, 300, 300, 400], 20)
+        #mask = self.mask.create_mask_from_line((200, 200), (500, 200))
+        #mask = self.mask.create_mask_from_lines([(100, 500), (200, 200), (500, 200), (600, 500)])
+
+
         for i in range(0, 33):
             for j in range(0, 33):
                 if mask.get_at((i*SCALE, j*SCALE)):
@@ -74,8 +71,13 @@ class Simulation:
             swarmalator = Swarmalator(i, j)
             self.arr_swarmalators.add(swarmalator)
 
-    def total_movement_and_phase_calcs(self):
+    def init_obstacles(self):
+        #left, top, width, height
+        self.obstacles.add(Obstacle(color=RED, size=(80, 50), position=(400, 550)))
+
+    def total_movement_and_phase_calcs(self, frame_count):
         swarmalators_positions = np.array([[s.x, s.y] for s in self.arr_swarmalators])
+        sim_rec_per_dt = []
 
         for curr_swarmalator in self.arr_swarmalators:
             curr_swarmalator.dx = 0
@@ -124,9 +126,58 @@ class Simulation:
             curr_swarmalator.v_x = (curr_swarmalator.dx / curr_swarmalator.num_bots_in_thres) * dt + (curr_swarmalator.dx_static / curr_swarmalator.num_static_in_thres) * dt
             curr_swarmalator.v_y = (curr_swarmalator.dy / curr_swarmalator.num_bots_in_thres) * dt + (curr_swarmalator.dy_static / curr_swarmalator.num_static_in_thres) * dt
 
+            self.handle_collisions(curr_swarmalator)
             curr_swarmalator.x += curr_swarmalator.v_x
             curr_swarmalator.y += curr_swarmalator.v_y
             curr_swarmalator.update(maxX, maxY)
+            sim_rec_per_dt.append((curr_swarmalator.x, curr_swarmalator.y))
+
+        self.sim_record[frame_count] = sim_rec_per_dt
+
+    def handle_collisions(self, swarmalator):
+        """Uses sprite-based collision handling"""
+        offset_x = abs(swarmalator.v_x)
+        offset_y = abs(swarmalator.v_y)
+
+        for obstacle in self.obstacles:
+            if pygame.sprite.collide_mask(obstacle, swarmalator):
+
+                swarmalator_center = np.array([swarmalator.rect.centerx, swarmalator.rect.centery])
+                obstacle_center = np.array([obstacle.rect.centerx, obstacle.rect.centery])
+
+                direction_vector = swarmalator_center - obstacle_center #from swarmulator to obstacle
+
+                half_width = obstacle.rect.width / 2
+                half_height = obstacle.rect.height / 2
+                thirty_percent_width = 0.3 * obstacle.rect.width
+
+                penetration_x = half_width - abs(direction_vector[0])
+                penetration_y = half_height - abs(direction_vector[1])
+
+                if penetration_x < penetration_y: #horizontal collision
+                    if direction_vector[0] < 0:
+                        direction = "left"
+                        obstacle.rect.x += offset_x
+                    else:
+                        direction = "right"
+                        obstacle.rect.x -= offset_x
+                else:
+                    if direction_vector[1] < 0: #vertical collision
+                        direction = "top"
+                        obstacle.rect.y += 12 *offset_y
+                        # if direction_vector[0] > thirty_percent_width:  # x displacement from center is more than fourty percent of the width
+                        #     obstacle.angle -= offset_y
+                        # elif -(direction_vector[0]) > thirty_percent_width:
+                        #     obstacle.angle += offset_y
+                    else:
+                        direction = "bottom"
+                        obstacle.rect.y -= 12 *offset_y
+                        # if direction_vector[0] > thirty_percent_width:  # x displacement from center is more than fourty percent of the width
+                        #     obstacle.angle += offset_y
+                        # elif -(direction_vector[0]) > thirty_percent_width:
+                        #     obstacle.angle -= offset_y
+
+                print(f"Collision detected from {direction} direction")
 
 
     def run(self):
@@ -137,6 +188,12 @@ class Simulation:
 
         FRAME_RATE = 60
         frame_count = 0
+        start = time.time()
+
+        x = 200
+        delta = 100
+        x_2 = 400
+        # y_400 = 400
 
         while running:
             for event in pygame.event.get():
@@ -145,30 +202,41 @@ class Simulation:
 
             self.screen.fill((255, 255, 255))
 
-            if frame_count % 2 == 0: #physics updates happen once every 2 frames
-                self.total_movement_and_phase_calcs()
+            if frame_count % 20 == 0:
+                if time.time() - start > 30:
+                    delta *= -1
+                    x_2 += delta
+                #y +=1
+                # if time.time() - start > 30:
+                #     y_400-=2
+                #mask = self.mask_creator.create_mask_from_circle((400, 400), y)
+                #mask = self.mask_creator.create_mask_from_donut((400, 400), x, y)
+                #mask = self.mask_creator.create_mask_from_hollow_ellipse([300, y_400, 200, 300], 60)
+                #mask = self.mask_creator.create_mask_from_lines([(100, 500), (200, 200), (300, x_2), (500, 200), (600, 500)])
+                mask = self.mask_creator.create_mask_from_polygon(self.polygon_points)
+                self.set_grid_beacons(mask)
+                self.total_movement_and_phase_calcs(frame_count)
 
             # for boundary_point in self.boundary_control_points:
             #     pygame.draw.circle(screen, RED, (int(boundary_point.center_x* SCALE), int(boundary_point.center_y * SCALE)), int(0.1 * 50))
+
 
             for beacon in self.arr_beacons:
                 if beacon.beacon_j >0:
                     pygame.draw.circle(self.screen, (0, 255, 0), (int(beacon.x * SCALE), int(beacon.y * SCALE)), 5)
 
-            # mask = self.create_mask_from_polygon()
-            # for x in range(mask.get_size()[0]):
-            #     for y in range(mask.get_size()[1]):
-            #         if mask.get_at((x, y)):
-            #             self.screen.set_at((x, y), RED)
-
 
             self.arr_swarmalators.draw(self.screen)
+            #self.obstacles.draw(self.screen)
 
             pygame.display.flip()
             clock.tick(FRAME_RATE)
             frame_count+=1
 
         pygame.quit()
+        with open("polygon", "w") as file:
+            print(self.sim_record)
+            json.dump(self.sim_record, file, indent=4)
 
 if __name__ == "__main__":
     sim = Simulation()
