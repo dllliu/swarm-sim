@@ -54,3 +54,16 @@ class MaskCreator:
         pygame.draw.lines(temp_surface, (255, 255, 255, 255), closed, points, width)
         return pygame.mask.from_surface(temp_surface)
 
+    def create_mask_from_letter(self, letter: str, font_size=300):
+        temp_surface = pygame.Surface((self.maxX, self.maxY), pygame.SRCALPHA)
+        temp_surface.fill((0, 0, 0, 0))  # Transparent
+
+        font = pygame.font.SysFont('Arial', font_size, bold=True)
+        text = font.render(letter, True, (255, 255, 255))
+
+        # Center the text
+        text_rect = text.get_rect(center=(self.maxX // 2, self.maxY // 2))
+        temp_surface.blit(text, text_rect)
+
+        return pygame.mask.from_surface(temp_surface)
+

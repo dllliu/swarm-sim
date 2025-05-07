@@ -16,7 +16,7 @@ SCALE = int(maxX / 33)
 
 NUM_SWARMALATORS = 100
 B = 0.4
-dt = 20
+dt = 2
 
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
@@ -31,10 +31,6 @@ class Simulation:
         self.set_swarmalators()
         self.obstacles = pygame.sprite.Group()
         self.set_time = time.time()
-        self.boundary_speed = 0.075
-        self.boundary_direction = -(np.pi) / 2
-        # self.boundary_control_points = [BoundaryPoint(33//2-13, 33//2-0.5, self.boundary_speed, self.boundary_direction, 0, 33, 0, 33),
-        #                                 BoundaryPoint(33//2-2, 33//2-11, self.boundary_speed, -self.boundary_direction, 0, 33, 0, 33)]
         self.radius = 1 #for circular paths
         self.screen = pygame.display.set_mode((maxX, maxY))
         self.polygon_points = [(50, 50), (350, 50), (125, 100), (350, 150), (50, 350), (75, 100)]
@@ -42,19 +38,32 @@ class Simulation:
         self.sim_record = {}
         #self.init_obstacles()
 
+    def select_mask(self, mask_arg):
+        if mask_arg == "polygon":
+            mask = self.mask_creator.create_mask_from_polygon(self.polygon_points)
+        elif mask_arg == "donut":
+            mask = self.mask_creator.create_mask_from_donut()
+
+        elif mask_arg == "circle":
+            mask = self.mask_creator.create_mask_from_circle()
+
+        elif mask_arg == "ellipse":
+            mask = self.mask_creator.create_mask_from_ellipse([225, 300, 300, 400])
+
+        elif mask_arg == "hollow_ellipse":
+            mask = self.mask_creator.create_mask_from_hollow_ellipse([225, 300, 300, 400], 20)
+
+        elif mask_arg == "lines":
+            mask = self.mask_creator.create_mask_from_lines([(100, 500), (200, 200), (500, 200), (600, 500)])
+        else:
+            print("Available options are: polygon, donut, circle, ellipse, hollow_ellipse, lines")
+            return None
+        return mask
+
 
     def set_grid_beacons(self, mask):
         self.arr_beacons.clear()
-        #mask = self.mask.create_mask_from_polygon(self.polygon_points)
-        #mask = self.mask.create_mask_from_polygon([(50, 50), (650, 50), (350, 400)])
-        # mask = self.mask_creator.create_mask_from_donut()
-        #mask = self.mask.create_mask_from_circle()
-        #mask = self.mask.create_mask_from_ellipse([225, 300, 300, 400])
-        #mask = self.mask.create_mask_from_hollow_ellipse([225, 300, 300, 400], 20)
-        #mask = self.mask.create_mask_from_line((200, 200), (500, 200))
-        #mask = self.mask.create_mask_from_lines([(100, 500), (200, 200), (500, 200), (600, 500)])
-
-
+        mask = self.select_mask("polygon")
         for i in range(0, 33):
             for j in range(0, 33):
                 if mask.get_at((i*SCALE, j*SCALE)):
@@ -188,31 +197,19 @@ class Simulation:
 
         FRAME_RATE = 60
         frame_count = 0
-        start = time.time()
-
-        x = 200
-        delta = 100
-        x_2 = 400
-        # y_400 = 400
 
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
 
+            if frame_count > 200:
+                running = False
+
             self.screen.fill((255, 255, 255))
 
             if frame_count % 20 == 0:
-                if time.time() - start > 30:
-                    delta *= -1
-                    x_2 += delta
-                #y +=1
-                # if time.time() - start > 30:
-                #     y_400-=2
-                #mask = self.mask_creator.create_mask_from_circle((400, 400), y)
-                #mask = self.mask_creator.create_mask_from_donut((400, 400), x, y)
-                #mask = self.mask_creator.create_mask_from_hollow_ellipse([300, y_400, 200, 300], 60)
-                #mask = self.mask_creator.create_mask_from_lines([(100, 500), (200, 200), (300, x_2), (500, 200), (600, 500)])
+
                 mask = self.mask_creator.create_mask_from_polygon(self.polygon_points)
                 self.set_grid_beacons(mask)
                 self.total_movement_and_phase_calcs(frame_count)
@@ -225,7 +222,6 @@ class Simulation:
                 if beacon.beacon_j >0:
                     pygame.draw.circle(self.screen, (0, 255, 0), (int(beacon.x * SCALE), int(beacon.y * SCALE)), 5)
 
-
             self.arr_swarmalators.draw(self.screen)
             #self.obstacles.draw(self.screen)
 
@@ -234,9 +230,10 @@ class Simulation:
             frame_count+=1
 
         pygame.quit()
-        with open("polygon", "w") as file:
-            print(self.sim_record)
-            json.dump(self.sim_record, file, indent=4)
+
+        # with open("polygon", "w") as file:
+        #     print(self.sim_record)
+        #     json.dump(self.sim_record, file, indent=4)
 
 if __name__ == "__main__":
     sim = Simulation()
