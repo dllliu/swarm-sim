@@ -155,5 +155,5 @@ if __name__ == "__main__":
     plt.ylabel('Number of Agents')
     plt.title('Agents Left Behind per Velocity and Agent Count')
     plt.tight_layout()
-    #plt.show()
+    plt.show()
     plt.savefig("heat-map.png")
