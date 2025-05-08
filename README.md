@@ -4,7 +4,7 @@ Swarmulator Simulator
 
 ## Description
 
-See [Doucment](https://docs.google.com/document/d/1TlTe65f_FflDNYchxWBmaPm8u2P7LipxdY3GkswwWMI/edit?usp=sharing)
+See [Document](https://docs.google.com/document/d/1TlTe65f_FflDNYchxWBmaPm8u2P7LipxdY3GkswwWMI/edit?usp=sharing)
 
 ### Dependencies
 
@@ -18,7 +18,7 @@ Before running the program, install the required dependencies using `pip`:
 pip install -r requirements.txt
 ```
 
-ake sure you're in the same directory as the ```requirements.txt``` file.
+Make sure you're in the same directory as the ```requirements.txt``` file.
 
 If you're using Python 3, use:
 
