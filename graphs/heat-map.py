@@ -36,27 +36,6 @@ class Simulation():
         self.y_bottom = 50
         self.y_top = 300
 
-    # def select_mask(self, mask_arg):
-    #     if mask_arg == "polygon":
-    #         mask = self.mask_creator.create_mask_from_polygon(self.polygon_points)
-    #     elif mask_arg == "donut":
-    #         mask = self.mask_creator.create_mask_from_donut()
-    #     elif mask_arg == "circle":
-    #         mask = self.mask_creator.create_mask_from_circle()
-    #     elif mask_arg == "ellipse":
-    #         mask = self.mask_creator.create_mask_from_ellipse([225, 300, 300, 400])
-    #     elif mask_arg == "hollow_ellipse":
-    #         mask = self.mask_creator.create_mask_from_hollow_ellipse([225, 300, 300, 400], 20)
-    #     elif mask_arg == "lines":
-    #         mask = self.mask_creator.create_mask_from_lines([(100, 500), (200, 200), (500, 200), (600, 500)])
-    #     elif mask_arg == "letter":
-    #         mask = self.mask_creator.create_mask_from_letter("a", 900)
-    #     else:
-    #         print("Available options are: polygon, donut, circle, ellipse, hollow_ellipse, lines")
-    #         return None
-    #     return mask
-
-
     def set_grid_beacons(self, mask):
         self.arr_beacons.clear()
         for i in range(0, 33):
@@ -145,8 +124,6 @@ class Simulation():
             if agent.x * SCALE < 100 or agent.x* SCALE > 300 or agent.y* SCALE < self.y_bottom or agent.y* SCALE > self.y_top:
                 num_left +=1
         return num_left
-
-
 
 if __name__ == "__main__":
     velocities = np.arange(0.1, 2.1, 0.1)
