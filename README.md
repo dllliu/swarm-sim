@@ -1,6 +1,4 @@
-# Project Title
-
-Swarmulator Simulator
+# Swarmulator Simulator
 
 ## Description
 
